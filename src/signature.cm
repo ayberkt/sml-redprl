@@ -14,6 +14,7 @@ Library
   structure AbtSignature
 is
   $/basis.cm
+  $/ml-yacc-lib.cm
   ../lib/sml-typed-abts/abt.cm
   ../lib/sml-telescopes/telescopes.cm
   ../lib/sml-typed-abts/lib/sml-parcom/parcom.cm (bind:(anchor:libs value:../lib/))
@@ -32,6 +33,8 @@ is
   signature/parser/lvl.sml
   signature/parser/tac.sml
   signature/parser/expr.sml
+  signature/parser/expr.grm
+  signature/parser/expr.lex
   signature/parser/token_parser.sml
   signature/term_parser.sig
   signature/term_parser.sml
