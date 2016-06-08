@@ -6,6 +6,8 @@ Library
   structure AstSignature
 
   structure ExprParser
+  structure ExprLrVals
+  structure RedPrlAst
 
   signature ABT_SIGNATURE
   structure AbtSignature
