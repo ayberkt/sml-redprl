@@ -5,10 +5,7 @@ Library
   signature AST_SIGNATURE
   structure AstSignature
 
-  signature TERM_PARSER
-  structure TermParser
-  functor SignatureParser
-  structure SignatureParser
+  structure ExprParser
 
   signature ABT_SIGNATURE
   structure AbtSignature
@@ -32,10 +29,7 @@ is
   signature/parser/generic.sml
   signature/parser/lvl.sml
   signature/parser/tac.sml
-  signature/parser/expr.sml
   signature/parser/expr.grm
+  signature/parser/parser.sml
   signature/parser/expr.lex
   signature/parser/token_parser.sml
-  signature/term_parser.sig
-  signature/term_parser.sml
-  signature/parser.fun

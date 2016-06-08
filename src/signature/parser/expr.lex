@@ -1,6 +1,6 @@
 type pos = int
-type svalue = Token.svalue
-type ('a,'b) token = ('a,'b) Token.token
+type svalue = Tokens.svalue
+type ('a,'b) token = ('a,'b) Tokens.token
 type lexresult = (svalue, pos) token
 
 fun getString s =
