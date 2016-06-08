@@ -19,8 +19,14 @@ structure Ast = RedPrlAst
    | SQUASH
    | UNIV
    | BASE
+   | DEF
+   | TAC
+   | THM
+   | REC
    | LPAREN
    | RPAREN
+   | LBRACKET
+   | RCURLY
    | LSQUARE
    | RSQUARE
    | OCTOTHORPE
@@ -34,7 +40,7 @@ structure Ast = RedPrlAst
    | APOSTROPHE
 
 %nonterm start of Ast.ast
-      |  expr  of Ast.ast
+      |  term  of Ast.ast
 
 %verbose
 %pos int
@@ -44,6 +50,7 @@ structure Ast = RedPrlAst
 %name Expr
 %%
 
-start : expr                                     (expr)
+start : term                                     (term)
 
-expr : IDENT                                     (Ast.` IDENT)
+term : OCTOTHORPE IDENT LPAREN
+     | IDENT                                     (Ast.` IDENT)

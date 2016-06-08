@@ -43,8 +43,15 @@ whitespace = [\ \t];
 "Univ"             => (Tokens.UNIV (!pos, !pos));
 "Base"             => (Tokens.BASE (!pos, !pos));
 
+"Def"              => (Tokens.DEF (!pos, !pos));
+"Tac"              => (Tokens.TAC (!pos, !pos));
+"Thm"              => (Tokens.THM (!pos, !pos));
+"Rec"              => (Tokens.REC (!pos, !pos));
+
 "("                => (Tokens.LPAREN (!pos, !pos));
 ")"                => (Tokens.RPAREN (!pos, !pos));
+"{"                => (Tokens.RBRACKET (!pos, !pos));
+"}"                => (Tokens.LBRACKET (!pos, !pos));
 "["                => (Tokens.LSQUARE (!pos, !pos));
 "]"                => (Tokens.RSQUARE (!pos, !pos));
 "#"                => (Tokens.OCTOTHORPE (!pos, !pos));
@@ -54,5 +61,6 @@ whitespace = [\ \t];
 "@"                => (Tokens.AT (!pos, !pos));
 "|"                => (Tokens.BAR (!pos, !pos));
 "."                => (Tokens.DOT (!pos, !pos));
+","                => (Tokens.COMMA (!pos, !pos));
 "~"                => (Tokens.TILDE (!pos, !pos));
 "\'"               => (Tokens.APOSTROPHE (!pos, !pos));
