@@ -1,0 +1,45 @@
+
+%%
+%header (functor ExprLrValsFun (structure Token : TOKEN))
+
+%term EOF
+   | IDENT of string
+   | FUN
+   | DFUN
+   | LAM
+   | AP
+   | IFEQ
+   | MEMBER
+   | NU
+   | DISECT
+   | CONS
+   | AX
+   | ATOM
+   | SQUASH
+   | UNIV
+   | BASE
+   | LPAREN
+   | RPAREN
+   | LSQUARE
+   | RSQUARE
+   | OCTOTHORPE
+   | EQUALS
+   | COLONLT
+   | LTEQUALS
+   | AT
+   | BAR
+   | DOT
+   | TILDE
+   | APOSTROPHE
+
+%nonterm start of unit
+
+%verbose
+%pos int
+%start start
+%eop EOF
+%noshift EOF
+%name Expr
+%%
+
+start : (())
