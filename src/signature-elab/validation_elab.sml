@@ -40,11 +40,9 @@ struct
             NONE => raise InvalidCustomOper opid
           | SOME d => d
       val sorts = ListPair.zipEq (List.map #2 params, List.map #2 parameters)
-      val () =
-        if List.all RedPrlAtomicSort.eq sorts then () else raise InvalidCustomOper opid
+      val () = if List.all RedPrlAtomicSort.eq sorts then () else raise InvalidCustomOper opid
       val expectedArity = (List.map #2 arguments, sort)
-      val () =
-        if RedPrlAtomicArity.eq (expectedArity, arity) then () else raise InvalidCustomOper opid
+      val () = if RedPrlAtomicArity.eq (expectedArity, arity) then () else raise InvalidCustomOper opid
     in
       ()
     end
@@ -57,10 +55,11 @@ struct
   fun checkDef map : S2.def -> unit =
     let
       fun go e =
-        case #1 (RedPrlAbt.infer e) of
+        (case #1 (RedPrlAbt.infer e) of
             ` _ => ()
           | oper $ args => (validate map oper; List.app goAbs args)
-          | _ $# (_, args) => List.app go args
+          | _ $# (_, args) => List.app go args)
+        handle exn => raise RedPrlExn.wrap (RedPrlAbt.getAnnotation e) exn
       and goAbs (_ \ a) = go a
     in
       go o #definiens
@@ -76,7 +75,7 @@ struct
       fun go map sign =
         case out sign of
             EMPTY => ()
-          | CONS (l, S1.Decl.DEF d, s) =>
+          | CONS (l, (S1.Decl.DEF d, pos), s) =>
             (checkDef map d; go (DefnMap.insert map l d) s)
           | CONS (l, _, s) =>
               go map s

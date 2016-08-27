@@ -1,9 +1,11 @@
 local
   $(SML_LIB)/basis/basis.mlb
+  ../lib/sml-json/json.mlb
   ../lib/sml-typed-abts/abt.mlb
   ../lib/sml-telescopes/telescopes.mlb
   ../lib/cmlib/cmlib.mlb
 
+  signature/exception.sml
   signature/signature.sig
 
   local
@@ -43,4 +45,6 @@ in
 
   signature ABT_SIGNATURE
   structure AbtSignature
+
+  structure RedPrlExn
 end

@@ -13,52 +13,80 @@ struct
       (fn (m, vl) => Metavariable.toString m ^ " : " ^ RedPrlAtomicValence.toString vl)
       ";"
 
-  fun printDef (lbl, {parameters, arguments, definiens, sort}) =
-    print
-      ("Def "
-         ^ Symbol.toString lbl
-         ^ "[" ^ paramsToString parameters ^ "]"
-         ^ "(" ^ argsToString arguments ^ ")"
-         ^ " : " ^ RedPrlAtomicSort.toString sort
-         ^ " = ["
-         ^ RedPrlAbtSyntax.toString definiens
-         ^ "].\n")
+  fun defToString (lbl, {parameters, arguments, definiens, sort}) =
+    "Def "
+       ^ Symbol.toString lbl
+       ^ "[" ^ paramsToString parameters ^ "]"
+       ^ "(" ^ argsToString arguments ^ ")"
+       ^ " : " ^ RedPrlAtomicSort.toString sort
+       ^ " = ["
+       ^ RedPrlAbtSyntax.toString definiens
+       ^ "].\n"
 
-  fun printSymDcl (lbl, tau) =
-    print
-      ("Sym "
-         ^ Symbol.toString lbl
-         ^ " : "
-         ^ RedPrlAtomicSort.toString tau
-         ^ ".\n")
-
+  fun symToString (lbl, tau) =
+    "Sym "
+       ^ Symbol.toString lbl
+       ^ " : "
+       ^ RedPrlAtomicSort.toString tau
+       ^ ".\n"
   local
     open AbtSignature
     open AbtSignature.Telescope
   in
-    fun printSign sign =
+    fun printDcl (lbl, d) =
+      case d of
+         Decl.SYM_DECL tau => print (symToString (lbl, tau))
+       | Decl.DEF def => print (defToString (lbl, def))
+
+    fun signToString sign =
       case ConsView.out sign of
-          ConsView.CONS (l, dcl, sign') =>
+          ConsView.CONS (l, (dcl, _), sign') =>
             ((case dcl of
-                 Decl.DEF d => printDef (l, d)
-               | Decl.SYM_DECL tau => printSymDcl (l, tau)); printSign sign')
-        | ConsView.EMPTY => ()
+                 Decl.DEF d => defToString (l, d)
+               | Decl.SYM_DECL tau => symToString (l, tau)) ^ signToString sign')
+        | ConsView.EMPTY => ""
+
+    fun dumpSignJson sign =
+      let
+        val json = encode sign
+      in
+        print (Json.toString json)
+      end
   end
 
   fun processFile fileName =
     let
       val input = TextIO.inputAll (TextIO.openIn fileName)
-      val parsed = CharParser.parseString SignatureParser.parseSigExp input
+      val stream = CoordinatedStream.coordinate (fn x => Stream.hd x = #"\n" handle Stream.Empty => false) (Coord.init fileName) (Stream.fromString input)
+      val parsed = CharParser.parseChars SignatureParser.parseSigExp stream
+
+      (* Error messages should be printed with all lines except their first indented by two spaces;
+         this is used for editor/IDE support. *)
+      fun printErr msg =
+        let
+          val lines = String.tokens (fn c => c = #"\n") msg
+          fun printErrLine x = TextIO.output (TextIO.stdErr, x ^ "\n")
+        in
+          case lines of
+             [] => ()
+           | l::ls =>
+               (printErrLine l;
+                List.app (fn l => printErrLine ("  " ^ l)) ls)
+        end
     in
-      case parsed of
-          INL s => raise Fail ("Parsing of " ^ fileName ^ " has failed: " ^ s)
+      (case parsed of
+          INL s => raise RedPrlExn.RedPrlExn (NONE, s)
         | INR sign =>
             let
-              val elab = RefineElab.transport o ValidationElab.transport o BindSignatureElab.transport
-              val sign' = elab sign
-              val _ = printSign sign'
+              val elab = ValidationElab.transport o BindSignatureElab.transport
             in
-              ()
-            end
+              RefineElab.execute
+                (elab sign)
+                printDcl
+                (printErr o RedPrlExn.toString)
+            end)
+        handle exn =>
+          (printErr (RedPrlExn.toString exn);
+           OS.Process.exit OS.Process.failure)
     end
 end

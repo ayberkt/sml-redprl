@@ -24,5 +24,5 @@ struct
   val def = AstSignatureDecl.DEF
   val symDecl = AstSignatureDecl.SYM_DECL
 
-  type sign = decl StringTelescope.telescope
+  type sign = (decl * Pos.t option) StringTelescope.telescope
 end

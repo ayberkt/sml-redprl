@@ -30,12 +30,13 @@ struct
     fn NONE => Target.TARGET_CONCL
      | SOME a => Target.TARGET_HYP a
 
-  fun rule (sign, rho) (tac : RedPrlAbt.abt) : tactic =
+  fun rule' (sign, rho) (tac : RedPrlAbt.abt) : tactic =
     case RSyn.out tac of
          RSyn.TAC_ID => (fn _ => T.ID)
        | RSyn.TAC_FAIL => (fn _ => fn _ => raise Fail "Fail")
        | RSyn.TAC_TRACE (_, m) => (fn _ => Trace m)
        | RSyn.TAC_ELIM (u, _) => R.Elim u
+       | RSyn.TAC_ETA (u, _) => R.Eta u
        | RSyn.TAC_HYP (u, _) => R.Hyp u
        | RSyn.TAC_UNHIDE (u, _) => R.Unhide u
        | RSyn.TAC_INTRO _ => R.Intro
@@ -53,4 +54,8 @@ struct
        | RSyn.TAC_NORMALIZE u => R.Normalize sign (optionToTarget u)
        | RSyn.TAC_AUTO => R.AutoStep sign
        | _ => raise InvalidRule
+
+  fun rule (sign, rho) (tac : RedPrlAbt.abt) alpha goal =
+    rule' (sign, rho) tac alpha goal
+      handle exn => raise RedPrlExn.wrap (RedPrlAbt.getAnnotation tac) exn
 end

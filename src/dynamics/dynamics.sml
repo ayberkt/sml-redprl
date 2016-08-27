@@ -1,52 +1,53 @@
+structure RedPrlClosure = LcsClosure (RedPrlAbt)
+structure RedPrlMachine = LcsMachine
+  (structure Cl = RedPrlClosure and K = RedPrlOperator.L.K
+   open RedPrlOperator Cl RedPrlAbt infix $ $# \ <:
+
+   fun isNeutral (r <: (env as (mrho, srho, vrho))) =
+     case out r of
+        `x => not (Abt.Var.Ctx.member vrho x)
+      | x $# _ => not (Abt.Metavar.Ctx.member mrho x)
+      | CUT _ $ [_, _ \ r'] => isNeutral (r' <: env)
+      | _ => false
+
+   fun isFinal (m <: env) =
+     case out m of
+        RET _ $ _ => true
+      | _ => isNeutral (m <: env))
+
 structure RedPrlDynamicsBasis : LCS_DYNAMICS_BASIS =
 struct
-  structure Abt = RedPrlAbt and O = RedPrlOperator
-  structure Cl = LcsClosure (Abt)
-
-  structure M = LcsMachine
-    (structure Cl = Cl and K = RedPrlOperator.L.K
-     open O Cl Abt infix $ $# \ <:
-
-     fun isNeutral (r <: (env as (mrho, srho, vrho))) =
-       case out r of
-          `x => not (Abt.Var.Ctx.member vrho x)
-        | x $# _ => not (Abt.Metavar.Ctx.member mrho x)
-        | CUT _ $ [_, _ \ r'] => isNeutral (r' <: env)
-        | _ => false
-
-     fun isFinal (m <: env) =
-       case out m of
-          RET _ $ _ => true
-        | _ => isNeutral (m <: env))
-
+  structure Abt = RedPrlAbt and O = RedPrlOperator and M = RedPrlMachine
 
   type vpat = (M.Cl.Abt.symbol O.L.V.t, M.expr) M.pat
-  type kpat = (M.Cl.Abt.symbol O.L.K.t, M.expr Cl.closure) M.pat
+  type kpat = (M.Cl.Abt.symbol O.L.K.t, M.expr M.Cl.closure) M.pat
   type dpat = (M.Cl.Abt.symbol O.L.D.t, M.expr) M.pat
 
   structure Sig =
   struct
     open AbtSignature
+
     type t = sign
     val empty = Telescope.empty
 
     fun define sign opid d =
-      Telescope.snoc sign opid (def sign d)
+      Telescope.snoc sign opid (def sign (d, NONE), NONE)
 
     fun lookup sign opid =
       case Telescope.lookup sign opid of
-         Decl.DEF d => d
+         (Decl.DEF d, _) => d
        | _ => raise Fail "no such definitional extension in signature"
   end
 
   local
-    infix 4 `$ $$ <: <|
+    infix 4 `$ $$ <: <| |> ?|>
     infix 3 \
-    open O M Abt Cl RedPrlOperators
+    open O M Abt M.Cl RedPrlOperators
     structure Ctt = CttOperators
       and Lvl = LevelOperators
       and Atm = AtomOperators
       and Rcd = RecordOperators
+      and Cub = CubicalOperators
       and Syn = RedPrlAbtSyntax
 
     fun pushV (cl : abt closure, x) (mrho, srho, vrho) =
@@ -68,9 +69,15 @@ struct
         Symbol.eq (u', v')
       end
 
+    fun makeTube [] [] = []
+      | makeTube (r :: rs) ((([u],_) \ face0) :: (([v],_) \ face1) :: faces) =
+          (r, ((u, face0), (v, face1))) :: makeTube rs faces
+      | makeTube _ _ = raise Fail "Failed to makeTube"
+
+
   in
     (* Plug a value into a continuation *)
-    fun plug sign (v <: env, k) ks =
+    fun plug sign ((us, v <: env), k) ks =
       case (k, v) of
 
        (* Lambda application *)
@@ -94,7 +101,7 @@ struct
                      Abt.$ (theta, es) =>
                        let
                          val supp = support theta
-                         fun wrap m = Syn.into (Syn.FRESH (sigma, tau, u, m))
+                         fun wrap m = Syn.into (Syn.FRESH (sigma, tau, u, Cl.force (m <: envE)))
                        in
                          if List.exists (fn (v, _) => symEq envE (u, v)) supp then
                            wrap e <: envE <| ks
@@ -104,13 +111,14 @@ struct
                    | _ => raise Match)
              | _ =>
                let
-                 val v = Abt.Var.fresh (Abt.varctx e) "probe"
-                 val k = CTT_K (Ctt.FRESH_K ((v, sigma), tau)) `$ []
+                 val probe = Abt.Sym.fresh (Abt.symctx e) ("probe-" ^ Symbol.toString u)
+                 val k = CTT_K (Ctt.FRESH_K ((probe, sigma), tau)) `$ []
                  val (mrho, srho, vrho) = envE
-                 val env' = (mrho, Abt.Sym.Ctx.insert srho u v, vrho)
+                 val env' = (mrho, Abt.Sym.Ctx.insert srho u probe, vrho)
                in
                  e <: env' <| k :: ks
                end)
+
        | (CTT_K (Ctt.FRESH_K ((u, sigma), tau)) `$ _, v) =>
            let
              val m = RET tau $$ [([],[]) \ unquoteV v]
@@ -150,9 +158,140 @@ struct
            else
              tl <: env <| (RCD_K (Rcd.PROJ lbl) `$ []) :: ks
 
-       (* Lisp-style introspection on singleton record type *)
-       | (RCD_K SINGL_GET_TY `$ _, RCD_V (Rcd.SINGL _) `$ [_ \ a]) =>
-           a <: env <| ks
+       | (RCD_K (Rcd.PROJ_TY lbl) `$ [_ \ rcd <: env'], RCD_V (Rcd.RECORD lbl') `$ [_ \ a, ([],[x]) \ bx]) =>
+           if symEq env (lbl, lbl') then
+             a <: env <| ks
+           else
+             let
+               val proj = Syn.into (Syn.RCD_PROJ (lbl', rcd))
+             in
+               bx <: pushV (proj <: env', x) env <| (RCD_K (Rcd.PROJ_TY lbl) `$ [([],[]) \ rcd <: env']) :: ks
+             end
+
+       | (CUB_K (Cub.ID_APP r) `$ [], CUB_V Cub.ID_ABS `$ [([u], _) \ m]) =>
+           let
+             val mr = Syn.substDim (r, u) m
+           in
+             mr <: env <| ks
+           end
+
+       (* TODO: figure out if we really need to bypass the environment like we're doing here *)
+       | (CUB_K (Cub.COE span) `$ [_ \ m <: mEnv], ty) =>
+           let
+             val u = List.hd us
+             val m' = Cl.force (m <: mEnv)
+
+             (* TODO: apply appropriate dimension renamings to 'span'? *)
+           in
+             case Syn.out (Cl.force (unquoteV ty <: env)) of
+                Syn.DFUN (a, x, bx) =>
+                  let
+                    val xtm = Syn.var (x, SortData.EXP)
+
+                    val coex = Syn.into (Syn.COE ((u, a), DimSpan.new (#ending span, Dim.NAME u), xtm))
+                    val bcoe = subst (coex, x) bx
+                    val app = Syn.into (Syn.AP (m', coex))
+                    val coe = Syn.into (Syn.COE ((u, bcoe), span, app))
+                    val lam = Syn.into (Syn.LAM (x, coe))
+                  in
+                    Cl.new lam |> ks
+                  end
+              | Syn.ID ((v, a), p1, p2) =>
+                  let
+                    val app = Syn.into (Syn.ID_APP (m', Dim.NAME v))
+                    val tube = [(Dim.NAME v, ((u, p1), (u, p2)))]
+                    val com = Syn.heteroCom ((u, a), span, app, tube)
+                    val abs = Syn.into (Syn.ID_ABS (v, com))
+                  in
+                    Cl.new abs |> ks
+                  end
+              | Syn.BOOL => m <: mEnv <| ks
+              | _ => raise Fail "Failed to apply cubical coercion"
+           end
+
+       | (CUB_K (Cub.HCOM (extents, span)) `$ ((_ \ cap <: capEnv) :: faces), ty) =>
+           let
+             val cap' = Cl.force (cap <: capEnv)
+
+             (* Find the first constant (0,1) extent and return the corresponding tube face *)
+             val rec findProjectedTubeFace =
+               fn [] => NONE
+                | (Dim.DIM0, (face0, _)) :: tube => SOME face0
+                | (Dim.DIM1, (_, face1)) :: tube => SOME face1
+                | _ :: tube => findProjectedTubeFace tube
+
+             val tube = makeTube extents faces
+           in
+             case Syn.out (Cl.force (unquoteV ty <: env)) of
+                Syn.DFUN (a, x, bx) =>
+                  let
+                    val xtm = Syn.var (x, SortData.EXP)
+                    val faces' = List.map (fn (b \ face <: faceEnv) => b \ Syn.into (Syn.AP (Cl.force (face <: faceEnv), xtm))) faces
+                    val tube' = makeTube extents faces'
+                    val app = Syn.into (Syn.AP (cap', xtm))
+                    val hcom = Syn.into (Syn.HCOM (bx, span, app, tube'))
+                    val lam = Syn.into (Syn.LAM (x, hcom))
+                  in
+                    Cl.new lam |> ks
+                  end
+              | Syn.ID ((u, a), p1, p2) =>
+                  let
+                    val app = Syn.into (Syn.ID_APP (cap', Dim.NAME u))
+                    val faces' = List.map (fn b \ face <: faceEnv => b \ Syn.into (Syn.ID_APP (Cl.force (face <: faceEnv), Dim.NAME u))) faces
+                    val tube' =
+                      let
+                        val w = Symbol.named "_"
+                      in
+                        makeTube extents faces' @ [(Dim.NAME u, ((w, p1), (w, p2)))]
+                      end
+                    val hcom = Syn.into (Syn.HCOM (a, span, app, tube'))
+                    val abs = Syn.into (Syn.ID_ABS (u, hcom))
+                  in
+                    Cl.new abs |> ks
+                  end
+              | Syn.BOOL =>
+                  (case findProjectedTubeFace tube of
+                      SOME (w, face <: faceEnv) => Syn.substDim (#ending span, w) face <: faceEnv <| ks
+                    | NONE =>
+                        if Dim.eq Symbol.eq (#starting span, #ending span) then
+                          cap <: capEnv <| ks
+                        else
+                          (* In this case, the syntax abstraction will have represented the hcom as canonical, so we should never
+                             step to this state in the machine. *)
+                          raise Fail "This case is impossible")
+              | _ => raise Fail "Failed to apply kan composition"
+           end
+
+       | (CUB_K Cub.BOOL_IF `$ [_, _ \ t, _], CUB_V Cub.BOOL_TT `$ _) => t <| ks
+       | (CUB_K Cub.BOOL_IF `$ [_, _, _ \ f], CUB_V Cub.BOOL_FF `$ _) => f <| ks
+       | (CUB_K Cub.BOOL_IF `$ [(_,[x]) \ a <: aEnv, _ \ t <: tEnv, _ \ f <: fEnv], CUB_V (Cub.BOOL_HCOM (extents, span)) `$ (_ \ cap) :: faces) =>
+           let
+             val a' = Cl.force (a <: aEnv)
+             val t' = Cl.force (t <: tEnv)
+             val f' = Cl.force (f <: fEnv)
+
+             val com =
+               let
+                 val w = Symbol.new ()
+                 val extents' = List.map Dim.NAME extents
+
+                 val hcom =
+                   let
+                     val span' = DimSpan.new (#starting span, Dim.NAME w)
+                     val tube = makeTube extents' faces
+                   in
+                     Syn.into (Syn.HCOM (Syn.into Syn.BOOL, span', cap, tube))
+                   end
+
+                 val a'' = subst (hcom, x) a'
+                 fun makeIf m = Syn.into (Syn.BOOL_IF ((x, a'), m, t', f'))
+                 val tube = makeTube extents' (List.map (Abt.mapb makeIf) faces)
+               in
+                 Syn.heteroCom ((w, a''), span, makeIf cap, tube)
+               end
+           in
+             com <: env <| ks
+           end
 
        (* Extract the witness from a refined theorem object. *)
        | (EXTRACT tau `$ _, REFINE _ `$ [_, _, _ \ e]) =>
@@ -165,8 +304,32 @@ struct
        | (FROM_SOME tau `$ _, OP_SOME _ `$ [_ \ e]) =>
            e <: env <| ks
 
+       | (THROW `$ _, EXN a `$ [_ \ e]) =>
+           let
+             val m = RET SortData.EXP $$ [([],[]) \ unquoteV v]
+           in
+             m <: env ?|> ks
+           end
+
+       | (CATCH _ `$ _, _) =>
+           let
+             val m = RET SortData.EXP $$ [([],[]) \ unquoteV v]
+           in
+             m <: env |> ks
+           end
+
        | _ => raise Fail "Unhandled cut"
 
+    fun catch sign (v <: env, k) st =
+      case (v, k) of
+         (EXN a `$ [_ \ m], CATCH b `$ [(_,[x]) \ nx <: env']) =>
+           if symEq env (a, b) then
+             SOME (nx <: pushV (m <: env, x) env' <| st)
+           else
+             NONE
+       | _ => NONE
+
+    val throw = Syn.into o Syn.RAISE
 
     (* Expand a definitional extension *)
     fun delta sign (d <: env) =
@@ -181,19 +344,13 @@ struct
        | CTT_D (Ctt.MEMBER tau) `$ [_ \ m, _ \ a] =>
            Syn.into (Syn.EQ (tau, m, m, a)) <: env
 
-       (* record types are built compositionally using dependent intersection *)
-       | RCD_D (Rcd.RECORD lbl) `$ [_ \ a, (_, [x]) \ bx] =>
+       | RCD_D (Rcd.SINGL lbl) `$ [_ \ a] =>
            let
-             val self = Var.named "self"
-             val selfTm = check (`self, S.EXP SortData.EXP)
-             val singl = Syn.into (Syn.RCD_SINGL (lbl, a))
-             val proj = Syn.into (Syn.RCD_PROJ (lbl, selfTm))
-
-             (* using an explicit substitution:*)
-             val bproj = ESUBST ([], [SortData.EXP], SortData.EXP) $$ [([],[x]) \ bx, ([],[]) \ proj]
+             val x = Var.named "_"
            in
-             Syn.into (Syn.DEP_ISECT (singl, self, bproj)) <: env
+             Syn.into (Syn.RECORD_TY (lbl, a, x, Syn.into Syn.AX)) <: env
            end
+
        | _ => raise Fail "Unhandled definitional extension"
   end
 end

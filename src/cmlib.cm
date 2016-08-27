@@ -6,6 +6,9 @@ Library
   structure IntHashable
   structure Sum
   structure Susp
+  structure Pos
+  structure Coord
+  structure Stream
+  structure CoordinatedStream
 is
   ../lib/cmlib/cmlib.cm
-

@@ -25,9 +25,6 @@ whose semantics are defined in Sterling & Morrison's
 [Syntax and Semantics of Abstract Binding Trees](https://github.com/jonsterling/syntax-and-semantics-of-abts),
 also by Sterling & Morrison.
 
-Finally, the Nominal LCF language, which provides support for well-scoped
-tactic scripts, is defined in Sterling's [Nominal LCF: A Language for Generic
-Proof](https://github.com/jonsterling/nominal-lcf-paper).
 
 ### What is this repository?
 
@@ -56,3 +53,40 @@ Then, a binary will be placed in `./bin/redprl`, which you may run as
 follows
 
     ./bin/redprl my-development.prl
+
+### Editor Support
+
+RedPRL is presently supported in Atom and Emacs.
+
+#### Atom
+
+The Atom plugin is available at [atom.io](https://atom.io/packages/language-redprl).
+
+### Emacs
+
+[![MELPA](https://melpa.org/packages/redprl-badge.svg)](https://melpa.org/#/redprl)
+
+The Emacs mode is a part of this repository. Additionally, it is available in
+[MELPA](https://melpa.org/#/redprl).
+
+The easiest way to install the package is from MELPA, using their [getting
+started](https://melpa.org/#/getting-started) instructions. The package is named
+`redprl`. It will probably be necessary to set the customization variable
+`redprl-command` to the path to the `redprl` binary.
+
+When `redprl-mode` is installed, files ending in `.prl` will automatically open
+in the mode. If they do not, run `M-x redprl-mode`. The mode supports the
+following features:
+
+
+ * Press `C-c C-l` to send the current development to RedPRL.
+
+ * Imenu (or wrappers such as `helm-imenu`) can be used to jump to definitions
+   in the buffer.
+
+ * Completion is supported for names of declarations in the current buffer.
+
+ * Flycheck is also supported, and can be used in lieu of `C-c C-l` if you like.
+   Be sure that either the `redprl` executable is in your path, or set
+   `flycheck-redprl-executable` in your own Emacs configuration.
+

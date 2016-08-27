@@ -1,6 +1,7 @@
 Library
   structure SortData
   structure RedPrlAtomicSort
+  structure RedPrlAtomicSortJson
   structure RedPrlAtomicValence
   structure RedPrlAtomicArity
   structure ArityNotation
@@ -26,6 +27,18 @@ Library
   structure AtomV
   structure AtomK
 
+  signature DIM
+  signature DIM_SPAN
+  signature DIM_VEC
+
+  structure Dim
+  structure DimSpan
+  structure DimVec
+
+  structure CubicalOperators
+  structure CubicalV
+  structure CubicalK
+
   structure RedPrlOperators
   structure RedPrlV
   structure RedPrlK
@@ -36,10 +49,10 @@ Library
   structure Symbol
 
   structure RedPrlLcs
-  structure RedPrlSort
   structure RedPrlOperator
   structure RedPrlAst
   structure RedPrlAbt
+  structure RedPrlAbtJson
   structure RedPrlAstToAbt
 
   structure ShowAbt
@@ -59,17 +72,28 @@ is
   ../lib/sml-typed-abts/abt.cm (bind:(anchor:libs value:../lib/))
   ../lib/sml-typed-abts/abt-unparser.cm (bind:(anchor:libs value:../lib/))
   ../lib/sml-typed-abts/abt-lcs.cm (bind:(anchor:libs value:../lib/))
+  ../lib/sml-typed-abts/abt-json.cm (bind:(anchor:libs value:../lib/))
+  ../lib/sml-json/json.cm (bind:(anchor:libs value:../lib/))
   ../lib/sml-telescopes/telescopes.cm
   cmlib.cm
 
-  syntax/sort_data.sml
+  syntax/option_util.sig
+  syntax/option_util.sml
+
+  syntax/sort.sml
   syntax/arity.sml
+
+  syntax/json_abt_operator.sig
+
+  syntax/dim.sig
+  syntax/dim.sml
 
   syntax/operator/nominal_lcf.sml
   syntax/operator/level.sml
   syntax/operator/ctt.sml
   syntax/operator/atom.sml
   syntax/operator/record.sml
+  syntax/operator/cubical.sml
 
   syntax/operator.sml
 

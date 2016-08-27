@@ -1,47 +1,49 @@
 local
   $(SML_LIB)/basis/basis.mlb
   ../lib/sml-unparse/unparse.mlb
+  ../lib/sml-json/json.mlb
   ../lib/sml-typed-abts/abt.mlb
+  ../lib/sml-typed-abts/abt-json.mlb
   ../lib/sml-typed-abts/abt-lcs.mlb
   ../lib/sml-typed-abts/abt-unparser.mlb
   ../lib/sml-telescopes/telescopes.mlb
 
-  syntax/sort_data.sml
+  local
+    ../lib/cmlib/cmlib.mlb
+  in
+    structure StringOrdered
+    structure Susp
+    structure Pos
+  end
+
+  syntax/option_util.sig
+  syntax/option_util.sml
+
+  syntax/sort.sml
   syntax/arity.sml
 
+  syntax/dim.sig
+  syntax/dim.sml
+
+  syntax/json_abt_operator.sig
   syntax/operator/nominal_lcf.sml
   syntax/operator/level.sml
   syntax/operator/ctt.sml
   syntax/operator/record.sml
   syntax/operator/atom.sml
+  syntax/operator/cubical.sml
   syntax/operator.sml
 
   syntax/abt.sml
   syntax/syntax.fun
-
-  local
-    local
-      ../lib/cmlib/cmlib.mlb
-    in
-      structure StringOrdered
-    end
-  in
-    syntax/telescope.sml
-  end
+  syntax/telescope.sml
 
   syntax/sequent.sig
-  local
-    local
-      ../lib/cmlib/cmlib.mlb
-    in
-      structure Susp
-    end
-  in
-    syntax/sequent.sml
-  end
+  syntax/sequent.sml
 in
   structure SortData
   structure RedPrlAtomicSort
+  structure RedPrlAtomicSortJson
   structure RedPrlAtomicValence
   structure RedPrlAtomicArity
   structure ArityNotation
@@ -67,6 +69,18 @@ in
   structure AtomV
   structure AtomK
 
+  signature DIM
+  signature DIM_SPAN
+  signature DIM_VEC
+
+  structure Dim
+  structure DimSpan
+  structure DimVec
+
+  structure CubicalOperators
+  structure CubicalV
+  structure CubicalK
+
   structure RedPrlOperators
   structure RedPrlV
   structure RedPrlK
@@ -80,6 +94,7 @@ in
   structure RedPrlOperator
   structure RedPrlAst
   structure RedPrlAbt
+  structure RedPrlAbtJson
   structure RedPrlAstToAbt
 
   structure ShowAbt

@@ -1,5 +1,5 @@
 (* A signature, which is a collection of declarations, is the core building
- * block of a JonPRL development.
+ * block of a RedPRL development.
  *
  * An implementation of [SIGNATURE] is a particular phase of signature
  * elaboration; one phase might have, for instance, many forms of declaration,
@@ -18,5 +18,5 @@ sig
   structure Telescope : TELESCOPE where type Label.t = opid
 
   (* A signature / [sign] is a telescope of declarations. *)
-  type sign = decl Telescope.telescope
+  type sign = (decl * Pos.t option) Telescope.telescope
 end

@@ -5,12 +5,20 @@ local
   ../lib/sml-typed-abts/lib/sml-parcom/parcom.mlb
 
   local
+    ../lib/sml-json/json.mlb
     ../lib/sml-telescopes/telescopes.mlb
     ../src/signature.mlb
     ../src/signature-elab.mlb
     ../src/syntax.mlb
   in
     frontend/frontend.sml
+
+    local
+      ../lib/sml-json/json.mlb
+      interactive.mlb
+    in
+      frontend/interactive.sml
+    end
   end
 
   frontend/main.sml
